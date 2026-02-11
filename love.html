@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Isabela | O Ciclo do Infinito</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Montserrat:wght@100;400;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ff3385;
+            --mc-glow: #ff0077;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background: #000;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden;
+            touch-action: none; /* Evita zoom acidental no mobile */
+        }
+
+        canvas { position: fixed; top: 0; left: 0; z-index: 0; }
+
+        /* Aura Central Ajustada para Mobile */
+        #aura-central {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px; height: 100px;
+            background: radial-gradient(circle, rgba(255, 51, 133, 0.5) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 1;
+            animation: breatheAura 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes breatheAura {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+            50% { transform: translate(-50%, -50%) scale(1.8); opacity: 0.7; }
+        }
+
+        /* Hitbox maior para facilitar o toque no celular */
+        #hitbox {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            cursor: pointer;
+            z-index: 1000;
+            background: transparent;
+            border: none; outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .particle {
+            position: absolute;
+            color: var(--primary);
+            font-family: 'Dancing Script', cursive;
+            font-size: 1.2rem; /* Menor no mobile */
+            text-shadow: 0 0 10px var(--primary);
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        #creditos {
+            position: absolute;
+            top: 100%; width: 100%;
+            text-align: center;
+            z-index: 5;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .poesia { margin-bottom: 350px; }
+        .verso { 
+            font-weight: 100; 
+            letter-spacing: 4px; 
+            text-transform: uppercase; 
+            font-size: 0.9rem; 
+            display: block; 
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 10px;
+        }
+        .destaque { 
+            font-weight: 900; 
+            font-size: 2.5rem; /* Reduzido para não quebrar linha no celular */
+            background: linear-gradient(to right, #fff, var(--primary), #fff); 
+            background-size: 200% auto; 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            animation: shine 3s linear infinite; 
+            display: block;
+        }
+
+        @keyframes shine { to { background-position: 200% center; } }
+
+        /* Estilo Minecraft Adaptado */
+        #final-anim {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            display: none;
+            width: 100%;
+            text-align: center;
+        }
+
+        .mc-text {
+            font-weight: 900;
+            font-size: 3.5rem; /* Ajustado para telas pequenas */
+            color: #fff;
+            text-shadow: 0 4px 0 #aaa, 0 0 30px var(--mc-glow);
+            animation: mc-shake 0.15s infinite alternate, mc-entry 0.8s forwards;
+        }
+
+        @keyframes mc-shake { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+        @keyframes mc-entry { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        .subir { animation: cinematic 55s linear forwards; }
+        @keyframes cinematic { to { transform: translateY(-7500px); } }
+
+        /* Media Query para Tablets ou Celulares deitados */
+        @media (min-width: 768px) {
+            .destaque { font-size: 4.5rem; }
+            .mc-text { font-size: 8rem; }
+            .particle { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="stars"></canvas>
+    <div id="aura-central"></div>
+    <button id="hitbox" onclick="start()"></button>
+
+    <div id="creditos">
+        <div class="poesia"><span class="verso">Dentre bilhões de estrelas</span><span class="destaque">Isabela</span></div>
+        <div class="poesia"><span class="verso">O universo conspirou</span><span class="destaque">Para nos unir</span></div>
+        <div class="poesia"><span class="verso">Teu sorriso é o meu</span><span class="destaque">Horizonte de Eventos</span></div>
+        <div class="poesia"><span class="verso">Além do tempo e do espaço</span><span class="destaque">Nosso Amor</span></div>
+    </div>
+
+    <div id="final-anim"><div class="mc-text">EU TE AMO</div></div>
+
+    <audio id="som" loop><source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" type="audio/mpeg"></audio>
+
+    <script>
+        const canvas = document.getElementById('stars');
+        const ctx = canvas.getContext('2d');
+        let speed = 0.5;
+        let starArray = [];
+        let particles = [];
+        let isRunning = false;
+
+        function resize() { 
+            canvas.width = window.innerWidth; 
+            canvas.height = window.innerHeight; 
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Star {
+            constructor() { this.reset(); }
+            reset() { 
+                this.x = (Math.random() - 0.5) * canvas.width * 2; 
+                this.y = (Math.random() - 0.5) * canvas.height * 2; 
+                this.z = Math.random() * canvas.width; 
+            }
+            draw() {
+                let sx = (this.x / this.z) * canvas.width + canvas.width/2;
+                let sy = (this.y / this.z) * canvas.height + canvas.height/2;
+                let r = (1 - this.z / canvas.width) * (window.innerWidth < 600 ? 1.5 : 3);
+                ctx.fillStyle = "white";
+                ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.fill();
+                this.z -= speed;
+                if(this.z < 1) this.reset();
+            }
+        }
+
+        for(let i=0; i< (window.innerWidth < 600 ? 300 : 600); i++) starArray.push(new Star());
+
+        function initParticles() {
+            const words = ["Isabela", "♥", "Eterna"];
+            const count = window.innerWidth < 600 ? 40 : 70;
+            for(let i=0; i<count; i++) {
+                const el = document.createElement('div');
+                el.className = 'particle';
+                el.innerText = words[i % words.length];
+                document.body.appendChild(el);
+                particles.push({ el, angle: (i/count) * Math.PI * 2, speed: 0.01 + Math.random()*0.01, active: false });
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            starArray.forEach(s => s.draw());
+            
+            particles.forEach(p => {
+                if(!p.active) {
+                    const t = p.angle;
+                    // Equação do coração
+                    const x = 16 * Math.pow(Math.sin(t), 3);
+                    const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                    const scale = window.innerWidth < 600 ? 8 : 18;
+                    p.el.style.left = (window.innerWidth/2 + x * scale) + "px";
+                    p.el.style.top = (window.innerHeight/2 + y * scale) + "px";
+                    p.angle += p.speed;
+                }
+            });
+            requestAnimationFrame(animate);
+        }
+
+        initParticles();
+        animate();
+
+        function start() {
+            if(isRunning) return;
+            isRunning = true;
+            
+            // Tenta dar play no som (browsers mobile exigem interação direta)
+            const som = document.getElementById('som');
+            som.play().catch(() => console.log("Interação necessária para áudio"));
+
+            document.getElementById('hitbox').style.display = "none";
+            document.getElementById('aura-central').style.opacity = "0";
+            speed = 20;
+
+            particles.forEach(p => {
+                p.active = true;
+                p.el.style.transition = "all 2s ease-in";
+                const a = Math.random() * Math.PI * 2;
+                const dist = window.innerWidth;
+                p.el.style.left = (window.innerWidth/2 + Math.cos(a) * dist) + "px";
+                p.el.style.top = (window.innerHeight/2 + Math.sin(a) * dist) + "px";
+                p.el.style.opacity = "0";
+            });
+
+            setTimeout(() => { 
+                document.getElementById('creditos').classList.add('subir'); 
+            }, 1500);
+
+            // ANIMAÇÃO FINAL
+            setTimeout(() => {
+                document.getElementById('creditos').style.display = "none";
+                speed = 0.2;
+                const final = document.getElementById('final-anim');
+                final.style.display = "block";
+
+                setTimeout(() => {
+                    location.reload(); // Recarrega a página para reiniciar a experiência
+                }, 8000); 
+
+            }, 55000); 
+        }
+    </script>
+</body>
+</html>
